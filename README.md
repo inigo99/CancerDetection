@@ -56,7 +56,7 @@ Cleaned dataset (29,443 rows, 5.72 GB)
    ▼
 Balanced-by-image subset (1,328 images, ~50/50)
    │
-   ├── Image-only CNN/Transformer models  ──────────────┐
+   ├── Image-only CNN/Transformer models   ──────────────┐
    ├── Tabular models on metadata (age, density, ...)    ├── Multi-Task Learning
    └── Image + metadata fusion / joint prediction ───────┘
 ```
