@@ -56,7 +56,7 @@ Conjunto limpio (29.443 filas, 5,72 GB)
    ▼
 Subconjunto balanceado por imagen (1.328 imágenes, ~50/50)
    │
-   ├── Modelos de imagen (CNN/Transformer) ──────────────┐
+   ├── Modelos de imagen (CNN/Transformer) ───────────────┐
    ├── Modelos tabulares sobre metadatos (edad, densidad…)├── Aprendizaje Multi Tarea
    └── Fusión imagen + metadatos / predicción conjunta ───┘
 ```
