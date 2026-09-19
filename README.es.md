@@ -27,7 +27,7 @@ Se exploran dos formas de combinar tareas:
   - [3. Modelos sobre datos tabulares](#3-modelos-sobre-datos-tabulares)
   - [4. Multi Tarea — fusión de características](#4-multi-tarea--fusión-de-características)
   - [5. Multi Tarea — predicción conjunta](#5-multi-tarea--predicción-conjunta)
-  - [Resumen de resultados](#resumen-de-resultados)
+  - [Conclusiones](#conclusiones)
 - [Contenido del repositorio](#contenido-del-repositorio)
 - [Cómo ejecutarlo](#cómo-ejecutarlo)
 
@@ -41,7 +41,7 @@ Se exploran dos formas de combinar tareas:
 
 **Desbalanceo de clases.** Sólo ~2 % de las imágenes están etiquetadas como positivas en cáncer. Se comparan dos estrategias de undersampling en lugar de oversampling/SMOTE, para no introducir datos sintéticos en una tarea diagnóstica donde los errores tienen un coste alto:
 - *Por paciente*: 504 pacientes (252 positivos), 2.597 imágenes — sigue desbalanceado (25,6 % / 74,4 %) porque los pacientes positivos conservan tanto sus imágenes positivas como negativas.
-- *Por imagen*: 1.328 imágenes, prácticamente balanceado al 50 % (664 positivas / 664 negativas) — el conjunto usado en el resto del trabajo.
+- *Por imagen*: 1.320 imágenes, prácticamente balanceado al 50 % (664 positivas / 656 negativas) — el conjunto usado en el resto del trabajo (80 % entrenamiento / 20 % validación para los modelos de imagen: 1.056 / 264 imágenes).
 
 **Particiones.** 80/20 entrenamiento/validación para los modelos de imagen; 70/10/20 entrenamiento/validación/prueba para los modelos tabulares (la validación se usa para elegir el mejor modelo e hiperparámetros, y después se reentrena con entrenamiento+validación y se evalúa una única vez sobre el conjunto de prueba).
 
@@ -54,7 +54,7 @@ DICOM (314,72 GB)
 Conjunto limpio (29.443 filas, 5,72 GB)
    │  → se descartan density/age faltantes, site_id, implant
    ▼
-Subconjunto balanceado por imagen (1.328 imágenes, ~50/50)
+Subconjunto balanceado por imagen (1.320 imágenes, ~50/50)
    │
    ├── Modelos de imagen (CNN/Transformer) ───────────────┐
    ├── Modelos tabulares sobre metadatos (edad, densidad…)├── Aprendizaje Multi Tarea
@@ -101,17 +101,17 @@ El pipeline tabular final (SVM sobre `age` + `density`) alcanza **Valor-F = 0,67
 
 ### 4. Multi Tarea — fusión de características
 
-Un modelo de imagen (EfficientNet / HRNet / ResNet / ConvNeXt / DeiT) se trunca antes de sus últimas capas para producir un vector de 512 características por mamografía; ese vector se concatena con `age` y `density` y se pasa a los mismos modelos tabulares de la sección anterior.
+Se consideraron tres formas de combinar imagen y datos tabulares — **Early Fusion** (fusionar los datos en bruto antes de extraer características), **Middle Fusion** (extraer primero las características de la imagen y fusionarlas después con los datos tabulares antes de clasificar) y **Late Fusion** (entrenar modelos por separado y fusionar sus salidas). Se eligió **Middle Fusion** por ser la que mejor se adapta al problema: un modelo de imagen (EfficientNet / HRNet / ResNet / ConvNeXt / DeiT) se trunca antes de sus últimas capas para producir un vector de 512 características por mamografía, que se concatena con `age` y `density` y se pasa a los mismos modelos tabulares de la sección anterior.
 
 | Extractor de características | Mejor modelo posterior | **Valor-F** |
 |---|---|---|
 | EfficientNet | SVM | 0,6704 |
-| **HRNet** | SVM | **0,6736** |
+| **HRNet** | **Random Forest** | **0,6788** |
 | ResNet-50 | Random Forest / SVM | 0,6394 |
 | ConvNeXt | Random Forest | 0,6569 |
 | DeiT3 | SVM | 0,6385 |
 
-Combinar características de imagen con metadatos mejora ligeramente el resultado tabular de referencia (mejor resultado Valor-F = 0,6736 con características de HRNet), aunque no de forma drástica; normalizar el conjunto combinado sacrifica el mejor resultado individual a cambio de más consistencia entre modelos.
+Combinar características de imagen con metadatos da el mejor resultado individual de todo el trabajo: **Valor-F = 0,6788** (características de HRNet + Random Forest), por delante tanto del mejor modelo tabular como del mejor modelo de imagen — aunque, como señalan las propias conclusiones de la memoria, no por un margen lo bastante amplio como para hablar de una ventaja clara del Aprendizaje Multi Tarea (ver más abajo).
 
 ### 5. Multi Tarea — predicción conjunta
 
@@ -127,17 +127,22 @@ Un único modelo predice `cancer`, `age` y `density` simultáneamente a partir d
 
 Reponderar la función de pérdida hacia la tarea de cáncer (la que clínicamente importa) mejora los resultados en todas las arquitecturas salvo EfficientNet, con ConvNeXt alcanzando el mejor Valor-F en predicción conjunta: **0,6305**. Una prueba usando únicamente la pérdida de cáncer (sin supervisión de edad/densidad) da peores resultados que la versión multitarea equilibrada, confirmando que las tareas auxiliares sí aportan y no son sólo coste computacional extra.
 
-### Resumen de resultados
+### Conclusiones
 
 | Enfoque | Mejor Valor-F (cáncer) |
 |---|---|
 | Sólo imagen, datos desbalanceados | 0,000 |
 | Sólo imagen, datos balanceados (ResNet-50) | 0,6703 |
 | Sólo datos tabulares (SVM, edad+densidad), conjunto de prueba | 0,6742 |
-| Multi Tarea, fusión de características (HRNet + SVM) | 0,6736 |
+| **Multi Tarea, fusión de características (HRNet + Random Forest)** | **0,6788** |
 | Multi Tarea, predicción conjunta (ConvNeXt, pérdida ponderada) | 0,6305 |
 
-El balanceo de clases es, con diferencia, el factor con mayor impacto en este conjunto de datos: es lo que convierte un clasificador inútil (Valor-F = 0) en uno funcional. Los enfoques Multi Tarea se sitúan en el mismo rango de Valor-F (~0,63–0,67) que los mejores modelos individuales, sin superarlos claramente, y en este trabajo la fusión de características obtiene mejor resultado que la predicción conjunta. El apartado de conclusiones de la memoria quedó sin redactar en el PDF original, así que este resumen refleja únicamente los resultados reportados en cada sección de experimentos, y no es una transcripción de unas conclusiones formales del documento.
+Estas son las conclusiones propias de la memoria (Apartado 6):
+
+- **El tratamiento de los datos es lo que más pesa.** El conjunto necesitó una reducción de volumen y una limpieza importantes antes de poder usarse — el conjunto final de trabajo es sólo un **2,5 %** del volumen de datos original, aproximadamente. Cómo se trata el conjunto de datos influye de forma directa y notable en los resultados finales.
+- **El Aprendizaje Multi Tarea no supone una mejora clara.** Ordenados por Valor-F, los cuatro enfoques quedan bastante cerca entre sí (0,6788 → 0,6742 → 0,6703 → 0,6305), por lo que no hay evidencia sólida de que combinar tareas supere a entrenar bien un único modelo para este problema en concreto.
+- **El Aprendizaje Multi Tarea es costoso.** Las dos aproximaciones Multi Tarea son más lentas de entrenar que un modelo de una sola tarea, y la fusión de características (Aproximación 1) es, con diferencia, la más pesada: requiere entrenar un modelo de imagen, extraer características, fusionar los datos y después entrenar un segundo modelo.
+- **Trabajo futuro:** un ensemble de los modelos de imagen y de datos estructurados por separado podría alcanzar resultados similares con un coste de tiempo inferior al de cualquiera de las dos arquitecturas Multi Tarea — una alternativa más barata que merecería explorarse.
 
 ## Contenido del repositorio
 
@@ -152,4 +157,4 @@ El balanceo de clases es, con diferencia, el factor con mayor impacto en este co
 
 ---
 
-*Este README se ha escrito a partir del contenido real de `TFM.ipynb` y `TFM.pdf` — todas las cifras anteriores proceden directamente de las tablas de resultados de la memoria.*
+*Este README se ha escrito a partir del contenido real de `TFM.ipynb` y `TFM.pdf` — todas las cifras y conclusiones anteriores proceden directamente de las tablas de resultados de la memoria y de su apartado de Conclusiones.*
