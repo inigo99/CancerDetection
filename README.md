@@ -27,7 +27,7 @@ Two ways of combining tasks are explored:
   - [3. Tabular metadata models](#3-tabular-metadata-models)
   - [4. Multi-task — feature fusion](#4-multi-task--feature-fusion)
   - [5. Multi-task — joint prediction](#5-multi-task--joint-prediction)
-  - [Summary of findings](#summary-of-findings)
+  - [Conclusions](#conclusions)
 - [Repository contents](#repository-contents)
 - [How to run it](#how-to-run-it)
 
@@ -41,7 +41,7 @@ Two ways of combining tasks are explored:
 
 **Class imbalance.** Only ~2% of images are labelled positive for cancer. Two undersampling strategies were compared instead of oversampling/SMOTE, to avoid introducing synthetic data into a diagnostic task where errors carry a high cost:
 - *By patient*: 504 patients (252 positive), 2,597 images — still imbalanced (25.6% / 74.4%) because positive patients keep both their positive and negative images.
-- *By image*: 1,328 images, an almost perfectly balanced 664 positive / 664 negative — the set used for all subsequent modelling.
+- *By image*: 1,320 images, an almost perfectly balanced 664 positive / 656 negative — the set used for all subsequent modelling (80% train / 20% validation for image models: 1,056 / 264 images).
 
 **Splits.** 80/20 train/validation for image models; 70/10/20 train/validation/test for tabular models (validation used to pick the best model/hyperparameters, then retrained on train+validation and evaluated once on the held-out test set).
 
@@ -54,7 +54,7 @@ DICOM (314.72 GB)
 Cleaned dataset (29,443 rows, 5.72 GB)
    │  → drop missing density/age, drop site_id/implant
    ▼
-Balanced-by-image subset (1,328 images, ~50/50)
+Balanced-by-image subset (1,320 images, ~50/50)
    │
    ├── Image-only CNN/Transformer models  ───────────────┐
    ├── Tabular models on metadata (age, density, ...)    ├── Multi-Task Learning
@@ -101,17 +101,17 @@ The final tabular pipeline (SVM on `age` + `density`) reaches **F1 = 0.6742** on
 
 ### 4. Multi-task — feature fusion
 
-An image backbone (EfficientNet / HRNet / ResNet / ConvNeXt / DeiT) is truncated before its final layers to produce a 512-dimensional embedding per mammography; this embedding is concatenated with `age` and `density` and fed into the same tabular models as above.
+Three ways of combining image and tabular data were considered — **Early Fusion** (merge raw inputs before feature extraction), **Middle Fusion** (extract image features first, then merge with tabular data before classifying) and **Late Fusion** (train separate models and merge their outputs). **Middle Fusion** was chosen as the best fit: an image backbone (EfficientNet / HRNet / ResNet / ConvNeXt / DeiT) is truncated before its final layers to produce a 512-dimensional embedding per mammography, which is then concatenated with `age` and `density` and fed into the same tabular models as above.
 
 | Feature extractor | Best downstream model | **F1** |
 |---|---|---|
 | EfficientNet | SVM | 0.6704 |
-| **HRNet** | SVM | **0.6736** |
+| **HRNet** | **Random Forest** | **0.6788** |
 | ResNet-50 | Random Forest / SVM | 0.6394 |
 | ConvNeXt | Random Forest | 0.6569 |
 | DeiT3 | SVM | 0.6385 |
 
-Combining image features with metadata gives a small improvement over the tabular-only baseline (best result F1 = 0.6736 with HRNet features), though not a dramatic one — normalising the combined feature set trades peak performance for more consistent results across models.
+Combining image features with metadata gives the best single result in the whole study: **F1 = 0.6788** (HRNet features + Random Forest), edging out both the tabular-only and image-only baselines — though, as the thesis's conclusions note, not by a wide enough margin to call it a clear win for Multi-Task Learning (see below).
 
 ### 5. Multi-task — joint prediction
 
@@ -127,17 +127,22 @@ A single backbone predicts `cancer`, `age` and `density` simultaneously from the
 
 Re-weighting the combined loss towards the cancer task (which is what actually matters clinically) improves results for every backbone except EfficientNet, with ConvNeXt reaching the best joint-prediction F1 of **0.6305**. An ablation using only the cancer loss term (dropping age/density supervision) performs worse than the balanced multi-task version — confirming that the auxiliary tasks do help, they aren't just extra compute.
 
-### Summary of findings
+### Conclusions
 
 | Approach | Best F1 (cancer) |
 |---|---|
 | Image only, imbalanced data | 0.000 |
 | Image only, balanced data (ResNet-50) | 0.6703 |
 | Tabular metadata only (SVM, age+density), test set | 0.6742 |
-| Multi-task, feature fusion (HRNet + SVM) | 0.6736 |
+| **Multi-task, feature fusion (HRNet + Random Forest)** | **0.6788** |
 | Multi-task, joint prediction (ConvNeXt, weighted loss) | 0.6305 |
 
-Class balancing has by far the largest single effect on this dataset — it's what turns a useless classifier (F1 = 0) into a working one. Multi-task approaches land in the same F1 range (~0.63–0.67) as the best single-task models rather than clearly surpassing them, and the feature-fusion variant edges out joint prediction here. The thesis's own conclusions section was left unfinished in the source PDF, so this summary reflects only the results actually reported in each experiment section — it isn't a restatement of a formal conclusion from the document.
+These are the thesis's own conclusions (Section 6):
+
+- **Data treatment matters most.** The dataset needed heavy volume reduction and cleaning before it was usable — the final working set is only about **2.5%** of the original data volume. How the data is processed has a direct, large effect on the final results.
+- **Multi-Task Learning did not bring a clear improvement.** Ranked by F1, the four approaches land close together (0.6788 → 0.6742 → 0.6703 → 0.6305), so there's no strong evidence that combining tasks beats training a single well-tuned model on this particular problem.
+- **Multi-Task Learning is expensive.** Both MTL approaches are slower to train than a single-task model, and feature fusion (Approach 1) is by far the heaviest: it requires training an image model, extracting features, fusing the data, and then training a second model on top.
+- **Future work:** an ensemble of the separate image and tabular models could plausibly reach similar results at a lower time cost than either Multi-Task architecture — a cheaper alternative worth exploring.
 
 ## Repository contents
 
@@ -152,4 +157,4 @@ Class balancing has by far the largest single effect on this dataset — it's wh
 
 ---
 
-*This README was written from the actual contents of `TFM.ipynb` and `TFM.pdf` — all figures above are taken directly from the thesis's results tables.*
+*This README was written from the actual contents of `TFM.ipynb` and `TFM.pdf` — all figures and conclusions above are taken directly from the thesis's results tables and its Conclusions section.*
