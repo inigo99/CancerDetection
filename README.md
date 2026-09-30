@@ -1,5 +1,7 @@
 # Multi-Task Learning for Breast Cancer Detection in Mammographies
 
+[![CI](https://github.com/inigo99/CancerDetection/actions/workflows/ci.yml/badge.svg)](https://github.com/inigo99/CancerDetection/actions/workflows/ci.yml)
+
 **Master's Thesis (TFM)** — Master's Degree in Data Science and Machine Learning, Escuela de Máster y Doctorado, academic year 2022/2023.
 
 Author: **Íñigo Fernández Barrill** · Supervisors: Manuel García Domínguez, Adrián Inés Armas
@@ -148,12 +150,22 @@ These are the thesis's own conclusions (Section 6):
 
 - **`TFM.ipynb`** — full experiment notebook: data cleaning, balancing, all image/tabular/multi-task models and their evaluation ([open in Colab](https://colab.research.google.com/) — see the badge at the top of the notebook).
 - **`TFM.pdf`** — the full thesis write-up (in Spanish), with the theoretical background, detailed methodology, and complete results tables referenced above.
+- **`src/cancer_detection/`** — the notebook's reusable steps as a tested Python package: cleaning, balancing, patient-level splits, the tabular baseline, feature fusion and the multi-task model and loss.
+- **`tests/`** — offline tests on synthetic metadata, run by GitHub Actions on every push.
+- **[`MODEL_CARD.md`](MODEL_CARD.md)** — intended use, data, metrics, limitations, and the issues found in the notebook while writing the package.
 
 ## How to run it
 
 1. Get the [RSNA Screening Mammography Breast Cancer Detection](https://www.kaggle.com/competitions/rsna-breast-cancer-detection) dataset from Kaggle.
 2. Open `TFM.ipynb` in Google Colab (or a local environment with `fastai`, `timm`, `torch`, `scikit-learn`, `pandas`, `numpy` installed) and run the DICOM→JPG conversion / resizing steps described above before training.
 3. Run the notebook sections in order: data cleaning → balancing → image models → tabular models → multi-task models.
+
+To use the package and run its tests (no dataset needed):
+
+```bash
+pip install -e ".[dev]"
+pytest
+```
 
 ---
 

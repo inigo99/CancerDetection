@@ -1,5 +1,7 @@
 # Aprendizaje Multitarea para Detección de Cáncer en Mamografías
 
+[![CI](https://github.com/inigo99/CancerDetection/actions/workflows/ci.yml/badge.svg)](https://github.com/inigo99/CancerDetection/actions/workflows/ci.yml)
+
 **Trabajo de Fin de Máster (TFM)** — Máster en Ciencia de Datos y Aprendizaje Automático, Escuela de Máster y Doctorado, curso académico 2022/2023.
 
 Autor: **Íñigo Fernández Barrill** · Tutores: Manuel García Domínguez, Adrián Inés Armas
@@ -148,12 +150,22 @@ Estas son las conclusiones propias de la memoria (Apartado 6):
 
 - **`TFM.ipynb`** — notebook completo de experimentos: limpieza de datos, balanceo, todos los modelos de imagen/tabulares/multitarea y su evaluación (ver el badge de Colab al inicio del notebook).
 - **`TFM.pdf`** — la memoria completa del TFM (en español), con el marco teórico, la metodología detallada y las tablas de resultados completas referenciadas arriba.
+- **`src/cancer_detection/`** — los pasos reutilizables del notebook como paquete de Python con tests: limpieza, balanceo, particiones por paciente, el modelo tabular, la fusión de características y el modelo y la pérdida multitarea.
+- **`tests/`** — tests sin conexión sobre metadatos sintéticos, que GitHub Actions ejecuta en cada push.
+- **[`MODEL_CARD.md`](MODEL_CARD.md)** — uso previsto, datos, métricas, limitaciones y los problemas del notebook encontrados al escribir el paquete (en inglés).
 
 ## Cómo ejecutarlo
 
 1. Descarga el conjunto [RSNA Screening Mammography Breast Cancer Detection](https://www.kaggle.com/competitions/rsna-breast-cancer-detection) de Kaggle.
 2. Abre `TFM.ipynb` en Google Colab (o en un entorno local con `fastai`, `timm`, `torch`, `scikit-learn`, `pandas`, `numpy` instalados) y ejecuta primero los pasos de conversión DICOM→JPG y redimensionado descritos arriba.
 3. Ejecuta las secciones del notebook en orden: limpieza de datos → balanceo → modelos de imagen → modelos tabulares → modelos multitarea.
+
+Para usar el paquete y ejecutar sus tests (no hace falta el dataset):
+
+```bash
+pip install -e ".[dev]"
+pytest
+```
 
 ---
 

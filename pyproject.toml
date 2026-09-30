@@ -1,0 +1,22 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "cancer-detection"
+version = "0.1.0"
+description = "Reusable pieces of the Multi-Task Learning breast cancer detection thesis (RSNA mammographies)"
+readme = "README.md"
+requires-python = ">=3.10"
+authors = [{ name = "Íñigo Fernández Barrill" }]
+dependencies = ["numpy", "pandas", "scikit-learn", "torch"]
+
+[project.optional-dependencies]
+dev = ["pytest", "ruff"]
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py310"
